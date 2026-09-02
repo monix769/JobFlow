@@ -1,0 +1,56 @@
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: jobflow-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: jobflow_db
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: jobflow_user
+      MYSQL_PASSWORD: jobflow_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/jobflow.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - jobflow-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jobflow-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/jobflow_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: jobflow_user
+      SPRING_DATASOURCE_PASSWORD: jobflow_password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      JWT_SECRET: jobflow_super_secret_jwt_key_2026_production_safe_string_minimum_256_bits
+    depends_on:
+      - mysql-db
+    networks:
+      - jobflow-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: jobflow-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - jobflow-network
+
+volumes:
+  mysql_data:
+
+networks:
+  jobflow-network:
+    driver: bridge
