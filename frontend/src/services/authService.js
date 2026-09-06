@@ -1,3 +1,5 @@
+import API_URL from '../config/api';
+
 // Auth Service with Dual Mode (Backend API + Instant Local Storage Fallback)
 
 const INITIAL_USERS = [
@@ -43,10 +45,18 @@ const initStorage = () => {
   if (!localStorage.getItem('jobflow_users')) {
     localStorage.setItem('jobflow_users', JSON.stringify(INITIAL_USERS));
   }
+
   if (!localStorage.getItem('jobflow_current_user')) {
     // Default logged in as candidate Alex Morgan for immediate preview
-    localStorage.setItem('jobflow_current_user', JSON.stringify(INITIAL_USERS[0]));
-    localStorage.setItem('jobflow_token', 'mock_jwt_token_alex_morgan_candidate');
+    localStorage.setItem(
+      'jobflow_current_user',
+      JSON.stringify(INITIAL_USERS[0])
+    );
+
+    localStorage.setItem(
+      'jobflow_token',
+      'mock_jwt_token_alex_morgan_candidate'
+    );
   }
 };
 
@@ -64,88 +74,184 @@ export const authService = {
 
   login: async (email, password) => {
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ email, password })
       });
+
       if (res.ok) {
         const data = await res.json();
+
         localStorage.setItem('jobflow_token', data.token);
-        localStorage.setItem('jobflow_current_user', JSON.stringify(data.user));
+        localStorage.setItem(
+          'jobflow_current_user',
+          JSON.stringify(data.user)
+        );
+
         return data.user;
       }
     } catch (e) {
-      console.warn("Backend API unavailable, using local mock auth store.");
+      console.warn(
+        "Backend API unavailable, using local mock auth store."
+      );
     }
 
     // Local Fallback
-    const users = JSON.parse(localStorage.getItem('jobflow_users') || '[]');
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const users = JSON.parse(
+      localStorage.getItem('jobflow_users') || '[]'
+    );
+
+    const user = users.find(
+      u => u.email.toLowerCase() === email.toLowerCase()
+    );
+
     if (user) {
-      localStorage.setItem('jobflow_token', `mock_jwt_token_${user.id}`);
-      localStorage.setItem('jobflow_current_user', JSON.stringify(user));
+      localStorage.setItem(
+        'jobflow_token',
+        `mock_jwt_token_${user.id}`
+      );
+
+      localStorage.setItem(
+        'jobflow_current_user',
+        JSON.stringify(user)
+      );
+
       return user;
     }
-    throw new Error('Invalid email or password. You can use the 1-click demo buttons below!');
+
+    throw new Error(
+      'Invalid email or password. You can use the 1-click demo buttons below!'
+    );
   },
 
   register: async (userData) => {
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify(userData)
       });
+
       if (res.ok) {
         const data = await res.json();
+
         localStorage.setItem('jobflow_token', data.token);
-        localStorage.setItem('jobflow_current_user', JSON.stringify(data.user));
+
+        localStorage.setItem(
+          'jobflow_current_user',
+          JSON.stringify(data.user)
+        );
+
         return data.user;
       }
     } catch (e) {
-      console.warn("Backend API unavailable, saving registered user locally.");
+      console.warn(
+        "Backend API unavailable, saving registered user locally."
+      );
     }
 
-    const users = JSON.parse(localStorage.getItem('jobflow_users') || '[]');
-    if (users.find(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
+    // Local Fallback
+    const users = JSON.parse(
+      localStorage.getItem('jobflow_users') || '[]'
+    );
+
+    if (
+      users.find(
+        u => u.email.toLowerCase() === userData.email.toLowerCase()
+      )
+    ) {
       throw new Error('Email is already registered');
     }
 
     const newUser = {
       ...userData,
       id: Date.now(),
-      avatarUrl: userData.avatarUrl || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"
+      avatarUrl:
+        userData.avatarUrl ||
+        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"
     };
 
     users.push(newUser);
-    localStorage.setItem('jobflow_users', JSON.stringify(users));
-    localStorage.setItem('jobflow_token', `mock_jwt_token_${newUser.id}`);
-    localStorage.setItem('jobflow_current_user', JSON.stringify(newUser));
+
+    localStorage.setItem(
+      'jobflow_users',
+      JSON.stringify(users)
+    );
+
+    localStorage.setItem(
+      'jobflow_token',
+      `mock_jwt_token_${newUser.id}`
+    );
+
+    localStorage.setItem(
+      'jobflow_current_user',
+      JSON.stringify(newUser)
+    );
+
     return newUser;
   },
 
   switchDemoUser: (role) => {
-    const users = JSON.parse(localStorage.getItem('jobflow_users') || '[]');
-    const targetUser = users.find(u => u.role === role) || INITIAL_USERS.find(u => u.role === role);
+    const users = JSON.parse(
+      localStorage.getItem('jobflow_users') || '[]'
+    );
+
+    const targetUser =
+      users.find(u => u.role === role) ||
+      INITIAL_USERS.find(u => u.role === role);
+
     if (targetUser) {
-      localStorage.setItem('jobflow_current_user', JSON.stringify(targetUser));
-      localStorage.setItem('jobflow_token', `mock_jwt_token_${targetUser.id}`);
+      localStorage.setItem(
+        'jobflow_current_user',
+        JSON.stringify(targetUser)
+      );
+
+      localStorage.setItem(
+        'jobflow_token',
+        `mock_jwt_token_${targetUser.id}`
+      );
+
       return targetUser;
     }
+
     return null;
   },
 
   updateProfile: (updatedProfile) => {
     const currentUser = authService.getCurrentUser();
-    if (!currentUser) return null;
 
-    const merged = { ...currentUser, ...updatedProfile };
-    localStorage.setItem('jobflow_current_user', JSON.stringify(merged));
+    if (!currentUser) {
+      return null;
+    }
 
-    const users = JSON.parse(localStorage.getItem('jobflow_users') || '[]');
-    const updatedUsers = users.map(u => u.id === merged.id ? merged : u);
-    localStorage.setItem('jobflow_users', JSON.stringify(updatedUsers));
+    const merged = {
+      ...currentUser,
+      ...updatedProfile
+    };
+
+    localStorage.setItem(
+      'jobflow_current_user',
+      JSON.stringify(merged)
+    );
+
+    const users = JSON.parse(
+      localStorage.getItem('jobflow_users') || '[]'
+    );
+
+    const updatedUsers = users.map(user =>
+      user.id === merged.id ? merged : user
+    );
+
+    localStorage.setItem(
+      'jobflow_users',
+      JSON.stringify(updatedUsers)
+    );
+
     return merged;
   },
 

@@ -1,3 +1,5 @@
+import API_URL from '../config/api';
+
 // Job Service with Search, Filter, CRUD & Bookmarking
 
 const INITIAL_JOBS = [
@@ -133,8 +135,12 @@ const initJobs = () => {
   if (!localStorage.getItem('jobflow_jobs')) {
     localStorage.setItem('jobflow_jobs', JSON.stringify(INITIAL_JOBS));
   }
+
   if (!localStorage.getItem('jobflow_saved_jobs')) {
-    localStorage.setItem('jobflow_saved_jobs', JSON.stringify([2, 4]));
+    localStorage.setItem(
+      'jobflow_saved_jobs',
+      JSON.stringify([2, 4])
+    );
   }
 };
 
@@ -143,63 +149,106 @@ initJobs();
 export const jobService = {
   getAllJobs: async (query = '') => {
     try {
-      const url = query ? `/api/jobs?search=${encodeURIComponent(query)}` : '/api/jobs';
+      const url = query
+        ? `${API_URL}/api/jobs?search=${encodeURIComponent(query)}`
+        : `${API_URL}/api/jobs`;
+
       const res = await fetch(url);
+
       if (res.ok) {
         return await res.json();
       }
     } catch (e) {
-      // fallback
+      console.warn("Backend unavailable, using local jobs.");
     }
 
-    let jobs = JSON.parse(localStorage.getItem('jobflow_jobs') || '[]');
+    let jobs = JSON.parse(
+      localStorage.getItem('jobflow_jobs') || '[]'
+    );
+
     if (query) {
       const q = query.toLowerCase();
-      jobs = jobs.filter(j => 
-        j.title.toLowerCase().includes(q) ||
-        j.company.toLowerCase().includes(q) ||
-        j.location.toLowerCase().includes(q) ||
-        (j.tags && j.tags.toLowerCase().includes(q))
+
+      jobs = jobs.filter(
+        j =>
+          j.title.toLowerCase().includes(q) ||
+          j.company.toLowerCase().includes(q) ||
+          j.location.toLowerCase().includes(q) ||
+          (j.tags && j.tags.toLowerCase().includes(q))
       );
     }
+
     return jobs;
   },
 
   getJobById: async (id) => {
     try {
-      const res = await fetch(`/api/jobs/${id}`);
-      if (res.ok) return await res.json();
+      const res = await fetch(
+        `${API_URL}/api/jobs/${id}`
+      );
+
+      if (res.ok) {
+        return await res.json();
+      }
     } catch (e) {
-      // fallback
+      console.warn("Backend unavailable, using local jobs.");
     }
-    const jobs = JSON.parse(localStorage.getItem('jobflow_jobs') || '[]');
-    return jobs.find(j => j.id === Number(id)) || null;
+
+    const jobs = JSON.parse(
+      localStorage.getItem('jobflow_jobs') || '[]'
+    );
+
+    return jobs.find(
+      j => j.id === Number(id)
+    ) || null;
   },
 
   getJobsByRecruiter: async (recruiterId) => {
     try {
-      const res = await fetch(`/api/jobs/recruiter/${recruiterId}`);
-      if (res.ok) return await res.json();
+      const res = await fetch(
+        `${API_URL}/api/jobs/recruiter/${recruiterId}`
+      );
+
+      if (res.ok) {
+        return await res.json();
+      }
     } catch (e) {
-      // fallback
+      console.warn("Backend unavailable, using local jobs.");
     }
-    const jobs = JSON.parse(localStorage.getItem('jobflow_jobs') || '[]');
-    return jobs.filter(j => j.recruiterId === Number(recruiterId));
+
+    const jobs = JSON.parse(
+      localStorage.getItem('jobflow_jobs') || '[]'
+    );
+
+    return jobs.filter(
+      j => j.recruiterId === Number(recruiterId)
+    );
   },
 
   createJob: async (recruiterId, jobData) => {
     try {
-      const res = await fetch(`/api/jobs/recruiter/${recruiterId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jobData)
-      });
-      if (res.ok) return await res.json();
+      const res = await fetch(
+        `${API_URL}/api/jobs/recruiter/${recruiterId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(jobData)
+        }
+      );
+
+      if (res.ok) {
+        return await res.json();
+      }
     } catch (e) {
-      // fallback
+      console.warn("Backend unavailable, creating job locally.");
     }
 
-    const jobs = JSON.parse(localStorage.getItem('jobflow_jobs') || '[]');
+    const jobs = JSON.parse(
+      localStorage.getItem('jobflow_jobs') || '[]'
+    );
+
     const newJob = {
       ...jobData,
       id: Date.now(),
@@ -208,59 +257,122 @@ export const jobService = {
       status: 'ACTIVE',
       createdAt: new Date().toISOString()
     };
+
     jobs.unshift(newJob);
-    localStorage.setItem('jobflow_jobs', JSON.stringify(jobs));
+
+    localStorage.setItem(
+      'jobflow_jobs',
+      JSON.stringify(jobs)
+    );
+
     return newJob;
   },
 
   updateJob: async (id, updatedData) => {
     try {
-      const res = await fetch(`/api/jobs/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedData)
-      });
-      if (res.ok) return await res.json();
+      const res = await fetch(
+        `${API_URL}/api/jobs/${id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updatedData)
+        }
+      );
+
+      if (res.ok) {
+        return await res.json();
+      }
     } catch (e) {
-      // fallback
+      console.warn("Backend unavailable, updating job locally.");
     }
 
-    const jobs = JSON.parse(localStorage.getItem('jobflow_jobs') || '[]');
-    const index = jobs.findIndex(j => j.id === Number(id));
+    const jobs = JSON.parse(
+      localStorage.getItem('jobflow_jobs') || '[]'
+    );
+
+    const index = jobs.findIndex(
+      j => j.id === Number(id)
+    );
+
     if (index !== -1) {
-      jobs[index] = { ...jobs[index], ...updatedData };
-      localStorage.setItem('jobflow_jobs', JSON.stringify(jobs));
+      jobs[index] = {
+        ...jobs[index],
+        ...updatedData
+      };
+
+      localStorage.setItem(
+        'jobflow_jobs',
+        JSON.stringify(jobs)
+      );
+
       return jobs[index];
     }
+
     throw new Error('Job not found');
   },
 
   deleteJob: async (id) => {
     try {
-      await fetch(`/api/jobs/${id}`, { method: 'DELETE' });
+      const res = await fetch(
+        `${API_URL}/api/jobs/${id}`,
+        {
+          method: 'DELETE'
+        }
+      );
+
+      if (res.ok) {
+        return true;
+      }
     } catch (e) {
-      // fallback
+      console.warn("Backend unavailable, deleting job locally.");
     }
-    let jobs = JSON.parse(localStorage.getItem('jobflow_jobs') || '[]');
-    jobs = jobs.filter(j => j.id !== Number(id));
-    localStorage.setItem('jobflow_jobs', JSON.stringify(jobs));
+
+    let jobs = JSON.parse(
+      localStorage.getItem('jobflow_jobs') || '[]'
+    );
+
+    jobs = jobs.filter(
+      j => j.id !== Number(id)
+    );
+
+    localStorage.setItem(
+      'jobflow_jobs',
+      JSON.stringify(jobs)
+    );
+
     return true;
   },
 
   getSavedJobIds: () => {
-    return JSON.parse(localStorage.getItem('jobflow_saved_jobs') || '[]');
+    return JSON.parse(
+      localStorage.getItem('jobflow_saved_jobs') || '[]'
+    );
   },
 
   toggleSaveJob: (jobId) => {
-    const saved = JSON.parse(localStorage.getItem('jobflow_saved_jobs') || '[]');
+    const saved = JSON.parse(
+      localStorage.getItem('jobflow_saved_jobs') || '[]'
+    );
+
     const numId = Number(jobId);
+
     let updated;
+
     if (saved.includes(numId)) {
-      updated = saved.filter(id => id !== numId);
+      updated = saved.filter(
+        id => id !== numId
+      );
     } else {
       updated = [...saved, numId];
     }
-    localStorage.setItem('jobflow_saved_jobs', JSON.stringify(updated));
+
+    localStorage.setItem(
+      'jobflow_saved_jobs',
+      JSON.stringify(updated)
+    );
+
     return updated;
   }
 };
